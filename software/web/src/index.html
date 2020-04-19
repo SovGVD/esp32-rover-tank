@@ -1,8 +1,30 @@
 <html>
 <head>
 <title>RoverTank</title>
+<style>
+	body{
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+		overscroll-behavior: none;
+	}
+	#joystick {
+		width: 100%;
+		height: 100%;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='100' width='100'%3E%3Ccircle cx='50' cy='50' r='45' stroke='black' stroke-width='3' fill='lightgreen' /%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: 50% 50%;
+		overscroll-behavior: none;
+	}
+</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body>
+<div id="joystick">
+</div>
 <script src="c.js"></script>
 <script src="s.js"></script>
 </body>

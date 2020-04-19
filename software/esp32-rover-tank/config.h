@@ -23,7 +23,7 @@
 #define MAX_SPEED 128   // max is 255
 
 // Obstacle
-#define OBSTACLE_DISTANCE 20   // in cm
+#define OBSTACLE_DISTANCE 0   // in cm, 0 - disable
 
 // IMU
 #define IMU_ADDRESS 0x68

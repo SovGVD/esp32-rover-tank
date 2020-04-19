@@ -12,10 +12,15 @@
 
 #include <NewPing.h>
 
+unsigned long currentTime;
+unsigned long previousTime;
+unsigned long loopTime;
+
 // define move params
-float speed   = 0;
-float yaw     = 0;
-float yawCalc = 0;
+float speed     = 0;
+float yaw       = 0;
+float speedCalc = 0;
+float yawCalc   = 0;
 
 // define motor values
 float leftMotor = 0;
@@ -51,27 +56,6 @@ IPAddress WiFiIP;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-
-void WiFiEvent(WiFiEvent_t event){
-    switch(event) {
-        case SYSTEM_EVENT_AP_START:
-            WiFi.softAPsetHostname(AP_ssid);
-            WiFiIP = WiFi.softAPIP();
-            break;
-        case SYSTEM_EVENT_AP_STOP:
-            break;
-        /*case SYSTEM_EVENT_STA_START:
-            WiFi.setHostname(AP_Ssid);
-            break;
-        case SYSTEM_EVENT_STA_GOT_IP:
-            WiFiIP = WiFi.localIP();
-            break;*/
-        default:
-            break;
-    }
-}
-
-
 void setup() {
   Serial.begin (SERIAL_BAUD);
   Wire.begin();
@@ -80,41 +64,84 @@ void setup() {
   ina219.begin();
 
   // init WiFi access point
-  WiFi.onEvent(WiFiEvent);
   WiFi.mode(WIFI_AP);
   WiFi.softAP(AP_ssid, AP_pass);
+  WiFi.softAPsetHostname(AP_ssid);
+  WiFiIP = WiFi.softAPIP();
 
+  initWebServer();
+  delay(1000);
   Serial.println("Go");
 }
 
 void loop() {
-  getPowerSensor();
-  getIMU();
-  Serial.print(invert ? "inverted" : "normal");
-  Serial.print(" ");
-  Serial.println(enabled ? "power_ok" : "power_low");
-  //delay(2000);
+  currentTime = millis();
+  if (currentTime - previousTime >= LOOP_TIME) {
+    previousTime = currentTime;
+    getPowerSensor();
+    getIMU();
+    updateFailsafe();
+    calcMove();
+    doMove();
+    /*Serial.print(speed);
+    Serial.print(" ");
+    Serial.print(yaw);
+    Serial.print("->");
+    Serial.print(yawCalc);
+    Serial.print(" | ");
+    Serial.print(invert ? "inverted" : "normal");
+    Serial.print(" ");
+    Serial.print(enabled ? "power_ok" : "power_low");
+    Serial.print(" | ");
+    Serial.print(leftMotor);
+    Serial.print(" ");
+    Serial.println(rightMotor);*/
+
+    FS_WS_count++;
+
+    loopTime = millis() - currentTime;
+  }
+
+}
+
+bool frontObstacle()
+{
+  return OBSTACLE_DISTANCE == 0 ? false : (invert ? sonar_back.ping_cm() : sonar_front.ping_cm()) < OBSTACLE_DISTANCE;
+}
+
+bool backObstacle()
+{
+  return OBSTACLE_DISTANCE == 0 ? false : (invert ? sonar_front.ping_cm() : sonar_back.ping_cm()) < OBSTACLE_DISTANCE;
 }
 
 void calcMove()
-{
-  if (speed > 0 && sonar_front.ping_cm() < OBSTACLE_DISTANCE) {
-    yawCalc = 1;
-  } else if (speed < 0 && sonar_back.ping_cm() < OBSTACLE_DISTANCE) {
-    yawCalc = -1;
+{  
+  if (speed > 0 && frontObstacle()) {
+    yawCalc = 0.5;
+  } else if (speed < 0 && backObstacle()) {
+    yawCalc = -0.5;
   } else {
     yawCalc = yaw;
   }
 
   float m = abs(speed)+abs(yawCalc); // normalisation
+  if (m == 0 || !enabled) {
+    leftMotor = 0;
+    rightMotor = 0;
+    return;
+  }
+  
+  if (m < 1) m = 1;
+  
   if (invert) m = -m;  // we are upside down
-  if (enabled) m = 0;  // not enough power to move, charge battery
-  leftMotor  = (speed-yawCalc)/m;
-  rightMotor = (speed+yawCalc)/m;
+
+// TODO this is still not correct
+  leftMotor  = (speed+yawCalc)/m;
+  rightMotor = (speed-yawCalc)/m;
 
 }
 
-void setMove()
+void doMove()
 {
     analogWrite(LEFT_MOTOR1_PIN, leftMotor > 0 ? 0 : leftMotor*MAX_SPEED);
     analogWrite(LEFT_MOTOR2_PIN, leftMotor > 0 ? leftMotor*MAX_SPEED : 0);
@@ -143,19 +170,7 @@ void getPowerSensor()
 
 void getIMU()
 {
-  static uint32_t prev_ms = millis();
-    if ((millis() - prev_ms) > 16)
-    {
-        mpu.update();
-
-        /*Serial.print(mpu.getRoll());
-        Serial.print(" ");
-        Serial.print(mpu.getPitch());
-        Serial.print(" ");
-        Serial.println(mpu.getYaw());*/
-
-        invert = mpu.getYaw() < 0;
-
-        prev_ms = millis();
-    }
+  mpu.update();  
+  // TODO better to add threshold here, going crazy on rotate
+  invert = mpu.getYaw() < 0;
 }
