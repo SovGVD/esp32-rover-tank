@@ -1,4 +1,4 @@
-# ESP32 powered talk-like rover
+# ESP32 powered tank-like rover
 
 ## Harware
 
