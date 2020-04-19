@@ -1,0 +1,5 @@
+software/esp32-rover-tank/config_wifi.h
+software/web/node_modules
+software/web/package-lock.json
+software/esp32-rover-tank/web/index.html.gz
+software/esp32-rover-tank/web/index.html.gz.h
