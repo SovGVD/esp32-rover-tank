@@ -61,6 +61,8 @@ void setup() {
   Wire.begin();
   delay(2000);
   mpu.setup();
+  // rover should be leveled here
+  mpu.calibrateAccelGyro();
   ina219.begin();
 
   // init WiFi access point
@@ -171,6 +173,5 @@ void getPowerSensor()
 void getIMU()
 {
   mpu.update();  
-  // TODO better to add threshold here, going crazy on rotate
-  invert = mpu.getYaw() < 0;
+  invert = mpu.getAcc(2) < 0;
 }
